@@ -1,7 +1,7 @@
-"""SI-Assist — interfaz Streamlit.
+"""Sacroiliaca-Assist — interfaz Streamlit.
 
-Esta capa solo orquesta: la lectura de datos vive en `si_assist.data`, el modelo en
-`si_assist.inference` y el dibujado de cortes en `si_assist.viewer`.
+Esta capa solo orquesta: la lectura de datos vive en `sacroiliaca_assist.data`, el modelo en
+`sacroiliaca_assist.inference` y el dibujado de cortes en `sacroiliaca_assist.viewer`.
 """
 from __future__ import annotations
 
@@ -13,9 +13,9 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from si_assist import data as D
-from si_assist import inference as I
-from si_assist import viewer as V
+from sacroiliaca_assist import data as D
+from sacroiliaca_assist import inference as I
+from sacroiliaca_assist import viewer as V
 
 ROOT = Path(__file__).resolve().parent
 DISCLAIMER = ("Herramienta académica. No es un dispositivo médico, no realiza diagnósticos "
@@ -23,7 +23,7 @@ DISCLAIMER = ("Herramienta académica. No es un dispositivo médico, no realiza 
 STUDY_KEYS = ("volume", "volume_key", "load_error", "result", "exports", "run_error", "run_requested",
               "ref", "ref_key", "ref_error", "ref_warnings", "metrics", "metrics_sig", "slice_no", "raw_params")
 
-st.set_page_config(page_title="SI-Assist", page_icon="🩻", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Sacroilíaca-Assist", page_icon="🩻", layout="wide", initial_sidebar_state="expanded")
 
 
 # --------------------------------------------------------------------------- #
@@ -208,7 +208,7 @@ def handle_reference(up, volume: D.Volume, cfg: dict, raw_params: dict | None = 
 def build_exports(volume: D.Volume, result: I.InferenceResult) -> dict:
     stem = D.study_stem(volume.name)
     prefix = "DEMO_" if result.model.is_demo else ""
-    desc = "SI-Assist DEMO (no es U-Net)" if result.model.is_demo else "SI-Assist U-Net"
+    desc = "Sacroiliaca-Assist DEMO (no es U-Net)" if result.model.is_demo else "Sacroiliaca-Assist U-Net"
     jobs = {
         "mask": (f"{prefix}{stem}_segmentacion.nii.gz", "application/gzip",
                  lambda: D.mask_to_nifti_gz(result.mask, volume, desc)),
@@ -265,7 +265,7 @@ def run_inference(volume: D.Volume, service: I.InferenceService) -> None:
 def sidebar(cfg: dict) -> I.InferenceService | None:
     ss = st.session_state
     with st.sidebar:
-        st.markdown('<div class="brand">SI-Assist</div>'
+        st.markdown('<div class="brand">Sacroiliaca-Assist</div>'
                     '<div class="brand-sub">Visor de resonancias de articulaciones sacroilíacas '
                     'con segmentación U-Net</div>', unsafe_allow_html=True)
 

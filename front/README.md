@@ -1,4 +1,4 @@
-# SI-Assist — frontend (Streamlit)
+# Sacroiliaca-Assist — frontend (Streamlit)
 
 Visor de resonancias magnéticas de las articulaciones sacroilíacas con superposición de la segmentación de una U-Net.
 Herramienta académica: no es un dispositivo médico, no diagnostica y no está validada clínicamente.
@@ -23,13 +23,12 @@ TensorFlow solo se necesita para la U-Net real. Sin el modelo, la app ofrece el 
 ```
 app.py                  Interfaz (orquesta; no contiene lógica de datos ni de modelo)
 config.yaml             Datos, visualización y parámetros del modelo
-si_assist/
+sacroiliaca_assist/
   data.py               Carga y validación, métricas, exportación
   inference.py          Contrato InferenceService, DemoService, UNetService
   viewer.py             Ventana de intensidad, superposición, colores por clase
 models/                 Aquí va el modelo entrenado (.keras / .h5)
 assets/style.css        Tema del visor
-tests/test_si_assist.py Pruebas
 .streamlit/config.toml  Tema oscuro y límite de subida (1 GB)
 ```
 
@@ -49,7 +48,7 @@ Para conectar la U-Net: ajustar `config.yaml` y, si el pipeline del equipo lo ex
 
 ## Qué se necesita del equipo de la U-Net
 
-1. El archivo del modelo (`.keras`, `.h5`) en `models/` (o la ruta en `model.path` / variable `SI_ASSIST_MODEL`).
+1. El archivo del modelo (`.keras`, `.h5`) en `models/` (o la ruta en `model.path` / variable `Sacroiliaca_ASSIST_MODEL`).
 2. ¿Es 2D o 3D? Hoy solo está implementado 2D corte a corte.
 3. Orientación de los cortes: eje de corte (`data.slice_axis`) y si la entrada es `[y, x]` (`model.swap_hw`).
 4. Normalización exacta (`none`, `minmax`, `percentile`, `zscore`; por volumen).
@@ -85,13 +84,3 @@ aviso permanente, el estado "Demostración", el prefijo `DEMO_` en los archivos 
 - **El modelo ya no se sube por la interfaz**: se coloca en `models/`. Un profesional de la salud no debería tener
   que manejar el archivo del modelo, y evita subidas de cientos de MB en cada sesión.
 - Los cortes se numeran desde 1 en toda la interfaz y en el CSV.
-
-## Pruebas
-
-```bash
-python -m pytest tests        # o: python tests/test_si_assist.py
-```
-
-Las pruebas de `UNetService` usan un modelo **falso** inyectado (un umbral): comprueban la tubería del front
-(normalización, remuestreo, orientación, reconstrucción en el espacio original), no ninguna U-Net real.
-La prueba de lectura/escritura NIfTI se omite si NiBabel no está instalado.

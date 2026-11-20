@@ -34,7 +34,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     },
     "model": {
         "path": "models/unet_si.keras",
-        "name": "U-Net SI-Assist",
+        "name": "U-Net Sacroiliaca-Assist",
         "confirmed": False,
         "mode": "2d",
         "input_size": None,

@@ -154,7 +154,7 @@ class DemoService(InferenceService):
 # --------------------------------------------------------------------------- #
 
 def resolve_model_path(cfg: dict, root: Path) -> Path:
-    raw = os.environ.get("SI_ASSIST_MODEL") or cfg["model"]["path"]
+    raw = os.environ.get("Sacroiliaca_ASSIST_MODEL") or cfg["model"]["path"]
     path = Path(raw)
     return path if path.is_absolute() else root / path
 
