@@ -1,0 +1,44 @@
+# SI-Assist — configuración
+# Los valores marcados "SIN CONFIRMAR" son suposiciones del front, no datos del
+# modelo real. Hay que validarlos con el equipo de la U-Net antes de usar la app
+# con resultados reales. Mientras `model.confirmed` sea false, la interfaz avisa.
+
+data:
+  slice_axis: 2            # eje del volumen que se recorre como "corte" (0, 1 o 2)
+  max_voxels: 150000000    # límite de tamaño del volumen cargado
+
+display:
+  transpose: true          # mostrar el corte transpuesto (como el prototipo)
+  flip_vertical: true      # invertir el eje vertical (origen abajo)
+                           # Solo afecta la pantalla; la máscara exportada no se modifica.
+raw:
+  width: 400
+  height: 400
+  dtype: int16
+  byte_order: little
+
+model:
+  path: models/unet_si.keras    # también se puede fijar con la variable SI_ASSIST_MODEL
+  name: U-Net SI-Assist
+  confirmed: false              # poner true solo cuando el equipo confirme todo lo de abajo
+
+  mode: 2d                      # solo "2d" (corte a corte) está implementado
+  input_size: null              # [alto, ancho]; null = tomar el del modelo
+  channels: 1
+  batch_size: 8
+  swap_hw: false                # true si el modelo se entrenó con cortes [y, x]
+
+  normalization:                # none | minmax | percentile | zscore (por volumen)
+    type: percentile
+    percentiles: [1, 99]
+
+  crop:
+    enabled: false              # El recorte de huesos NO está implementado: requiere el código del equipo
+
+  output:
+    type: auto                  # auto | sigmoid | softmax
+    threshold: 0.5              # solo para sigmoid
+                                # Con softmax se asume canal 0 = fondo
+
+  classes:                      # etiqueta -> nombre
+    1: Región segmentada

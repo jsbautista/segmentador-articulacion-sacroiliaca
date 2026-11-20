@@ -1,0 +1,44 @@
+/* SI-Assist — tema de visor de imágenes. Tokens: grafito azulado + verde azulado clínico. */
+:root {
+  --bg: #12161b; --panel: #1a2027; --line: #2a323b;
+  --text: #dbe2e8; --muted: #8b97a3; --accent: #4fb3bf;
+  --warn: #d9a441; --warn-bg: rgba(217,164,65,.12); --bad: #e5736b;
+}
+#MainMenu, footer { visibility: hidden; }
+header[data-testid="stHeader"] { background: transparent; }
+.block-container { padding-top: 1.6rem; padding-bottom: 2rem; max-width: 1500px; }
+section[data-testid="stSidebar"] { border-right: 1px solid var(--line); }
+section[data-testid="stSidebar"] h4 { margin: 1.1rem 0 .3rem; font-size: .95rem; color: var(--text); }
+
+.brand { font-size: 1.45rem; font-weight: 650; letter-spacing: .01em; }
+.brand-sub { color: var(--muted); font-size: .82rem; line-height: 1.35; margin-bottom: .4rem; }
+
+.study-bar { display: grid; grid-template-columns: 2.2fr repeat(4, 1fr) 1.2fr; gap: 1px;
+  background: var(--line); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; margin-bottom: 1rem; }
+.study-bar > div { background: var(--panel); padding: .55rem .8rem; min-width: 0; }
+.study-bar .k { color: var(--muted); font-size: .74rem; }
+.study-bar .v { font-size: .98rem; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.status-ok { color: var(--accent); } .status-wait { color: var(--muted); } .status-demo { color: var(--warn); }
+@media (max-width: 900px) { .study-bar { grid-template-columns: 1fr 1fr; } }
+
+.banner { border-radius: 6px; padding: .6rem .9rem; margin-bottom: .8rem; font-size: .9rem; line-height: 1.4; }
+.banner.demo { background: var(--warn-bg); border: 1px solid var(--warn); color: #f0d9a8; }
+
+.viewer-head { display: flex; justify-content: space-between; color: var(--muted);
+  font-size: .85rem; font-variant-numeric: tabular-nums; margin-bottom: .3rem; }
+.viewer-head b { color: var(--text); font-weight: 600; }
+[data-testid="stImage"] img { width: 100%; max-height: 78vh; object-fit: contain; background: #000; border-radius: 4px; }
+
+.legend { font-size: .86rem; line-height: 1.7; font-variant-numeric: tabular-nums; }
+.legend .chip { display: inline-block; width: .8rem; height: .8rem; border-radius: 2px; margin-right: .5rem; vertical-align: -1px; }
+.legend .muted { color: var(--muted); }
+
+.empty { max-width: 40rem; margin: 4rem auto; }
+.empty h2 { font-weight: 600; margin-bottom: .6rem; }
+.empty ol { color: var(--text); line-height: 1.9; padding-left: 1.2rem; }
+.empty .note { color: var(--muted); font-size: .88rem; margin-top: 1.2rem; }
+.disclaimer { color: var(--muted); font-size: .76rem; line-height: 1.4; margin-top: 1.4rem; }
+
+/* Botones a ancho completo en la barra lateral y en las descargas */
+section[data-testid="stSidebar"] .stButton button,
+.stDownloadButton button { width: 100%; }
