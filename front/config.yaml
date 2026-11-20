@@ -1,4 +1,4 @@
-# SI-Assist — configuración
+# Sacroiliaca-Assist — configuración
 # Los valores marcados "SIN CONFIRMAR" son suposiciones del front, no datos del
 # modelo real. Hay que validarlos con el equipo de la U-Net antes de usar la app
 # con resultados reales. Mientras `model.confirmed` sea false, la interfaz avisa.
@@ -18,8 +18,8 @@ raw:
   byte_order: little
 
 model:
-  path: models/unet_si.keras    # también se puede fijar con la variable SI_ASSIST_MODEL
-  name: U-Net SI-Assist
+  path: models/unet_si.keras    # también se puede fijar con la variable Sacroiliaca_ASSIST_MODEL
+  name: U-Net Sacroiliaca-Assist
   confirmed: false              # poner true solo cuando el equipo confirme todo lo de abajo
 
   mode: 2d                      # solo "2d" (corte a corte) está implementado
