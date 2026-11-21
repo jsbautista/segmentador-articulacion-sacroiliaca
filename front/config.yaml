@@ -18,7 +18,7 @@ raw:
   byte_order: little
 
 model:
-  path: models/unet_si.keras    # también se puede fijar con la variable Sacroiliaca_ASSIST_MODEL
+  path: models/mejor_modelo.pt    # también se puede fijar con la variable Sacroiliaca_ASSIST_MODEL
   name: U-Net Sacroiliaca-Assist
   confirmed: false              # poner true solo cuando el equipo confirme todo lo de abajo
 
