@@ -14,10 +14,11 @@ display:
 raw:
   width: 400
   height: 400
-  dtype: int16
+  dtype: uint16
   byte_order: little
 
 model:
+  framework: torch
   path: models/mejor_modelo.pt    # también se puede fijar con la variable Sacroiliaca_ASSIST_MODEL
   device: auto                  # auto | cpu | cuda  (solo torch)
   arch:                         # red del equipo, necesaria para un checkpoint de pesos
