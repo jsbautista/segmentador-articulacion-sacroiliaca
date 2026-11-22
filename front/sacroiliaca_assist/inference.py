@@ -247,7 +247,7 @@ class UNetService(InferenceService):
         self.model_path = resolve_model_path(cfg, root)
         self._model = model  # inyectable para pruebas
         self.root = Path(root)
-        self._framework = str(self.cfg.get("framework", "keras")).lower()
+        self._framework = str(self.cfg.get("framework", "torch")).lower()
         self._device: str | None = None
         stamp = ""
         if self.model_path.exists():
