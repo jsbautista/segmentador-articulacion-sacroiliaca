@@ -8,3 +8,4 @@ nibabel>=5.2
 # Solo para ejecutar la U-Net real (el modo demostración funciona sin esto):
 tensorflow>=2.15
 torch>=2.1
+SimpleITK
