@@ -173,11 +173,59 @@ def unet_availability(cfg: dict, root: Path) -> tuple[bool, str]:
         return False, f"No está instalado {' ni '.join(mods)} (pip install {mods[0]})."
     return True, str(path)
 
+STIR_PARAMS = {
+    "mask_fraction": 0.05, "spacing_xyz_mm": (0.6, 0.6, 3.0), "shrink": 4,
+    "iterations": (50, 50, 50), "low_pct": 0.5, "high_pct": 99.5,
+}
+
+
+def _sij_stir(vol_xyz: np.ndarray) -> np.ndarray:
+    """Réplica del preprocesado del equipo: máscara corporal -> N4 -> percentiles 0.5-99.5 -> uint8 -> /255."""
+    try:
+        import SimpleITK as sitk  # type: ignore
+    except ImportError as exc:
+        raise InferenceError("Falta SimpleITK para el preprocesado STIR (pip install SimpleITK).") from exc
+    p = STIR_PARAMS
+    d = np.ascontiguousarray(np.transpose(vol_xyz, (2, 1, 0)))              # (D, H, W)
+
+    raw = d > p["mask_fraction"] * np.percentile(d, 99)                     # máscara corporal
+    filled = np.zeros(raw.shape, dtype=np.uint8)
+    for k in range(raw.shape[0]):
+        filled[k] = sitk.GetArrayFromImage(sitk.BinaryFillhole(sitk.GetImageFromArray(raw[k].astype(np.uint8))))
+    cc = sitk.RelabelComponent(sitk.ConnectedComponent(sitk.GetImageFromArray(filled)), sortByObjectSize=True)
+    mask = sitk.GetArrayFromImage(cc) == 1
+    if not mask.any():
+        raise InferenceError("No se encontró cuerpo en el volumen (máscara corporal vacía).")
+
+    def to_img(a):
+        im = sitk.GetImageFromArray(a)
+        im.SetSpacing(tuple(float(v) for v in p["spacing_xyz_mm"]))
+        return im
+
+    d32 = d.astype(np.float32)
+    img = to_img(d32 + 1.0)
+    msk = sitk.Cast(to_img(mask.astype(np.uint8)), sitk.sitkUInt8)
+    f = [int(p["shrink"]), int(p["shrink"]), 1]
+    n4 = sitk.N4BiasFieldCorrectionImageFilter()
+    n4.SetMaximumNumberOfIterations(list(p["iterations"]))
+    n4.Execute(sitk.Shrink(img, f), sitk.Shrink(msk, f))
+    bias = np.exp(sitk.GetArrayFromImage(n4.GetLogBiasFieldAsImage(img)).astype(np.float32))
+    corr = ((d32 + 1.0) / bias - 1.0).astype(np.float32)
+
+    lo, hi = np.percentile(corr[mask].astype(np.float64), [p["low_pct"], p["high_pct"]])
+    if hi <= lo:
+        raise InferenceError(f"Rango de normalización degenerado (lo={lo}, hi={hi}).")
+    u8 = np.rint((np.clip(corr.astype(np.float64), lo, hi) - lo) / (hi - lo) * 255.0).astype(np.uint8)
+    return np.ascontiguousarray(np.transpose(u8.astype(np.float32) / 255.0, (2, 1, 0)))
 
 def normalize(vol: np.ndarray, cfg: dict) -> np.ndarray:
     """Normalización por volumen según `model.normalization` (INTEGRACIÓN: confirmar con el equipo)."""
     kind = (cfg.get("type") or "none").lower()
+    if kind == "sij_stir":      # .raw STIR crudo: réplica del preprocesado del equipo
+        return _sij_stir(vol)
     vol = vol.astype(np.float32, copy=False)
+    if kind == "scale255":      # volumen ya preprocesado en uint8 (0-255)
+        return (vol / 255.0).astype(np.float32)
     if kind == "none":
         return vol
     if kind == "zscore":
@@ -375,20 +423,26 @@ class UNetService(InferenceService):
         cfg = self.cfg
         if str(cfg.get("mode", "2d")).lower() != "2d":
             raise InferenceError("Solo está implementado el modo 2D corte a corte. El modo 3D requiere el código del equipo.")
-        if cfg.get("crop", {}).get("enabled"):
-            raise InferenceError("El recorte de la región ósea aún no está implementado: requiere el código exacto de entrenamiento.")
+        crop = cfg.get("crop") or {}
+        roi = None
+        if crop.get("enabled"):
+            roi = tuple(int(v) for v in (crop.get("roi") or ()))
+            if len(roi) != 4 or roi[0] >= roi[1] or roi[2] >= roi[3]:
+                raise InferenceError("`model.crop.roi` debe ser [fila_ini, fila_fin, col_ini, col_fin].")
+        roi_size = [roi[1] - roi[0], roi[3] - roi[2]] if roi else None
 
         progress(0.0, "Cargando modelo…")
         model = self._ensure_model()
         if self._framework == "torch":
-            if not cfg.get("input_size"):
+            size_cfg = cfg.get("input_size") or roi_size
+            if not size_cfg:
                 raise InferenceError("Con PyTorch define `model.input_size: [alto, ancho]` en config.yaml.")
-            shape = (None, *cfg["input_size"], int(cfg.get("channels", 1)))
+            shape = (None, *size_cfg, int(cfg.get("channels", 1)))
         else:
             shape = getattr(model, "input_shape", None)
         if not shape or isinstance(shape, list) or len(shape) != 4:
             raise InferenceError(f"Se espera una U-Net 2D con entrada (lote, alto, ancho, canales); detectado: {shape}.")
-        size = cfg.get("input_size") or [shape[1], shape[2]]
+        size = cfg.get("input_size") or roi_size or [shape[1], shape[2]]
         if None in size:
             raise InferenceError("El modelo no fija el tamaño de entrada; defínelo en `model.input_size` de config.yaml.")
         size = (int(size[0]), int(size[1]))
@@ -396,11 +450,16 @@ class UNetService(InferenceService):
         if channels != 1:
             raise InferenceError(f"El front prepara un solo canal y el modelo espera {channels}.")
 
-        progress(0.02, "Normalizando volumen…")
+        progress(0.02, "Preprocesando volumen (puede tardar)…")
         vol = normalize(volume.data, cfg.get("normalization", {}))
         axis, swap = self.slice_axis, bool(cfg.get("swap_hw", False))
         n = vol.shape[axis]
         batch = max(1, int(cfg.get("batch_size", 8)))
+        in_plane = tuple(vol.shape[a] for a in range(3) if a != axis)
+        full_hw = in_plane[::-1] if swap else in_plane          # forma del corte tal como lo ve la red
+        if roi and (roi[1] > full_hw[0] or roi[3] > full_hw[1]):
+            raise InferenceError(f"El ROI {list(roi)} no cabe en un corte de {full_hw[0]}x{full_hw[1]} "
+                                 "(revisa `model.crop.roi` y `model.swap_hw`).")
         mask = np.zeros(volume.shape, dtype=np.uint8)
         mask_view = np.moveaxis(mask, axis, 0)   # vista: escribir aquí escribe en `mask`
         n_fg = 1
@@ -410,21 +469,25 @@ class UNetService(InferenceService):
             slices = []
             for i in ids:
                 sl = np.take(vol, i, axis=axis)
-                slices.append(_resize(sl.T if swap else sl, size, order=1))
+                sl = sl.T if swap else sl
+                if roi:
+                    sl = sl[roi[0]:roi[1], roi[2]:roi[3]]
+                slices.append(_resize(sl, size, order=1))
             x = np.stack(slices)[..., None].astype(np.float32)
             y = self._forward(model, x)
             labels, n_fg = _to_labels(y, cfg.get("output", {}))
-            in_plane = tuple(vol.shape[a] for a in range(3) if a != axis)
             for j, i in enumerate(ids):
-                target_hw = in_plane[::-1] if swap else in_plane
-                lab = _resize(labels[j], target_hw, order=0)
+                if roi:                                          # la máscara vuelve al corte completo
+                    lab = np.zeros(full_hw, dtype=np.uint8)
+                    lab[roi[0]:roi[1], roi[2]:roi[3]] = _resize(labels[j], tuple(roi_size), order=0)
+                else:
+                    lab = _resize(labels[j], full_hw, order=0)
                 mask_view[i] = lab.T if swap else lab
             progress(min(1.0, (ids[-1] + 1) / n), f"Procesando corte {ids[-1] + 1} de {n}")
 
         names = cfg.get("classes", {})
         classes = {k: str(names.get(k, names.get(str(k), f"Clase {k}"))) for k in range(1, n_fg + 1)}
         return mask, classes
-
 
 def build_service(engine: str, cfg: dict, root: Path) -> InferenceService:
     if engine == "demo":
