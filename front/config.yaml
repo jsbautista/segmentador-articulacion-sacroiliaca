@@ -14,16 +14,24 @@ display:
 raw:
   width: 400
   height: 400
-  dtype: int16
+  dtype: uint16
   byte_order: little
 
 model:
-  path: models/unet_si.keras    # también se puede fijar con la variable Sacroiliaca_ASSIST_MODEL
+  framework: torch
+  path: models/mejor_modelo.pt    # también se puede fijar con la variable Sacroiliaca_ASSIST_MODEL
+  device: auto                  # auto | cpu | cuda  (solo torch)
+  arch:                         # red del equipo, necesaria para un checkpoint de pesos
+    file: models/modelo.py        # .py que define la clase (copiarlo a models/)
+    class: UNet                 # nombre de la clase
+    kwargs: {}                  # argumentos del constructor EXACTOS del entrenamiento (p. ej. {in_channels: 1, out_channels: 1})
+  checkpoint_key: null          # clave del state_dict si el checkpoint es un dict; null = autodetectar
+  trust_checkpoint: false       # true solo si el checkpoint trae objetos no tensoriales y confías en el archivo
   name: U-Net Sacroiliaca-Assist
-  confirmed: false              # poner true solo cuando el equipo confirme todo lo de abajo
+  confirmed: true              # poner true solo cuando el equipo confirme todo lo de abajo
 
   mode: 2d                      # solo "2d" (corte a corte) está implementado
-  input_size: null              # [alto, ancho]; null = tomar el del modelo
+  input_size: [256,256]              # [alto, ancho]; null = tomar el del modelo
   channels: 1
   batch_size: 8
   swap_hw: false                # true si el modelo se entrenó con cortes [y, x]
@@ -36,7 +44,7 @@ model:
     enabled: false              # El recorte de huesos NO está implementado: requiere el código del equipo
 
   output:
-    type: auto                  # auto | sigmoid | softmax
+    type: logits                  # auto | sigmoid | softmax
     threshold: 0.5              # solo para sigmoid
                                 # Con softmax se asume canal 0 = fondo
 

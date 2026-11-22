@@ -33,7 +33,12 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "byte_order": "little"
     },
     "model": {
-        "path": "models/unet_si.keras",
+        "path": "models/mejor_modelo.pt",
+        "framework": "torch",
+        "device": "auto",
+        "arch": {},
+        "checkpoint_key": None,
+        "trust_checkpoint": False,
         "name": "U-Net Sacroiliaca-Assist",
         "confirmed": False,
         "mode": "2d",
